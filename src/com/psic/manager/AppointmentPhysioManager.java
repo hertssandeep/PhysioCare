@@ -105,7 +105,7 @@ public class AppointmentPhysioManager {
 	}
 	
 	public void generatePhysiciansData() {
-		Physician pys1 = new Physician(1001, "Sethu Babu", "XYZ", "1321434322");
+		Physician pys1 = new Physician(2001, "Sandeep", "Liverpool", "321213213");
 		pys1.addExpertise(Constants.physioTherapy);
 		pys1.addExpertise(Constants.osteopathy);
 		
@@ -161,7 +161,7 @@ public class AppointmentPhysioManager {
 		
 		
 		
-		Physician pys2 = new Physician(1002, "James Joseph", "ABC", "1321434982");
+		Physician pys2 = new Physician(2002, "Devils", "Manchester", "5243154684");
 		pys2.addExpertise(Constants.physioTherapy);
 		pys2.addExpertise(Constants.rehabilation);
 		
@@ -206,7 +206,7 @@ public class AppointmentPhysioManager {
 		physiciansByExpertise.get(Constants.rehabilation).add(pys2);
 		physiciansByExpertise.get(Constants.physioTherapy).add(pys2);
 		
-		Physician pys3 = new Physician(1003, "Jason Ali", "London", "6824592913");
+		Physician pys3 = new Physician(2003, "Branham", "London", "4654876542");
 		pys3.addExpertise(Constants.osteopathy);
 		
 		pys3.addTreatment(Constants.acupuncture);
@@ -249,7 +249,7 @@ public class AppointmentPhysioManager {
 		physicians.put(pys3.getId(), pys3);
 		physiciansByExpertise.get(Constants.osteopathy).add(pys3);
 		
-		Physician pys4 = new Physician(1004, "John Abraham", "London", "6961592913");
+		Physician pys4 = new Physician(2004, "Kali", "London", "79845465465");
 		pys4.addExpertise(Constants.physioTherapy);
 		
 		pys4.addTreatment(Constants.massage);
@@ -292,7 +292,7 @@ public class AppointmentPhysioManager {
 		physicians.put(pys4.getId(), pys4);
 		physiciansByExpertise.get(Constants.physioTherapy).add(pys4);
 		
-		Physician pys5 = new Physician(1005, "Rhea", "London", "6981292914");
+		Physician pys5 = new Physician(2005, "Reo", "London", "465423144");
 		pys5.addExpertise(Constants.rehabilation);
 		pys5.addExpertise(Constants.osteopathy);
 		
@@ -380,13 +380,13 @@ public class AppointmentPhysioManager {
 		System.out.print("Please select the expertise: ");
 		int option = Utils.readInteger();
 		String exp = expertises.get(option-1);
-		System.out.print("Please enter the date on which you are looking to book appointment in dd-mm-yyyy format: ");
+		System.out.print("Please enter the date to book appointment in dd-mm-yyyy format: ");
 		String date = Utils.readString();
 		boolean isValid =false;
 		try {
 			isValid = Utils.validateDate(date);
 		}catch(Exception e) {
-			System.out.println("Date entered is not valid. Please try again and enter valid date");
+			System.out.println("Date entered is not valid. Please try again");
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e1) {
@@ -404,7 +404,7 @@ public class AppointmentPhysioManager {
 			List<String> timings = phy.getTimings().get(day);
 			if(timings==null)
 				continue;
-			availableApps.addAll(getAvailableAppointments(timings, phy, exp, patientID, date, 1));
+			availableApps.addAll(getAvailableAppointmentsToBook(timings, phy, exp, patientID, date, 1));
 		}
 		bookAppointment(availableApps);
 		
@@ -423,16 +423,16 @@ public class AppointmentPhysioManager {
 		}
 		PrintTable table = new PrintTable();
 		table.print(rows, headers);
-		System.out.print("Please enter the Physician ID of whom you want to book appointment: ");
+		System.out.print("Please enter the Physician ID to book appointment: ");
 		int id = Utils.readInteger();
 		Physician physician = physicians.get(id);
-		System.out.print("Please enter the date on which you are looking to book appointment in dd-mm-yyyy format: ");
+		System.out.print("Please enter the date to book appointment in dd-mm-yyyy format: ");
 		String date = Utils.readString();
 		boolean isValid =false;
 		try {
 			isValid = Utils.validateDate(date);
 		}catch(Exception e) {
-			System.out.println("Date entered is not valid. Please try again and enter valid date");
+			System.out.println("Date entered is not valid. Please try again");
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e1) {
@@ -448,19 +448,47 @@ public class AppointmentPhysioManager {
 			return;
 		}else {
 			List<String> timings = physician.getTimings().get(day);
-			List<Appointment> availableAppointments =getAvailableAppointments(timings, physician, "", patientID, date, 2);
+			List<Appointment> availableAppointments =getAvailableAppointmentsToBook(timings, physician, "", patientID, date, 2);
 			bookAppointment(availableAppointments);
 		}
 		
 	}
 	
-	public List<Appointment> getAvailableAppointments(List<String> timings, Physician physician, String exp, int patientID, String date, int option) {
+	public List<String> getAvailableRooms(String date, String time, String treatment) {
+		List<String> rooms = treatmentToRooms.get(treatment);
+		List<String> availableRooms = new ArrayList<>();
+		for(String room: rooms) {
+			if(roomToAppointment.get(date)!=null) {
+				if(roomToAppointment.get(date).get(room)!=null) {
+					List<Appointment> apps = roomToAppointment.get(date).get(room);
+					boolean isBooked = false;
+					for(Appointment app: apps) {
+						if(verifyOverlappingTimings(app.getTiming(), time) && app.isCancelled()==false) {
+							isBooked =true;
+							break;
+						}
+						
+					}
+					if(!isBooked)
+						availableRooms.add(room);
+				}else {
+					availableRooms.add(room);
+				}
+			}else {
+				availableRooms.add(room);
+			}
+		}
+		
+		return availableRooms;
+	}
+	
+	public List<Appointment> getAvailableAppointmentsToBook(List<String> timings, Physician physician, String exp, int patientID, String date, int option) {
 		List<Appointment> availableAppointments = new ArrayList<>();
 		List<Appointment> apps = null;
 		if(appointments.get(date)!=null)
 			apps= appointments.get(date).get(physician.getId());
 		for(String time: timings) {
-			if(apps==null || verifyAvailability(time, apps)) {
+			if(apps==null || verifyAvailabilityToBooking(time, apps)) {
 				List<String> treatments;
 				if(option == 2) {
 					treatments = physician.getTreatmentsOffered();
@@ -488,35 +516,9 @@ public class AppointmentPhysioManager {
 		return availableAppointments;
 	}
 	
-	public List<String> getAvailableRooms(String date, String time, String treatment) {
-		List<String> rooms = treatmentToRooms.get(treatment);
-		List<String> availableRooms = new ArrayList<>();
-		for(String room: rooms) {
-			if(roomToAppointment.get(date)!=null) {
-				if(roomToAppointment.get(date).get(room)!=null) {
-					List<Appointment> apps = roomToAppointment.get(date).get(room);
-					boolean isBooked = false;
-					for(Appointment app: apps) {
-						if(verifyOverlapping(app.getTiming(), time) && app.isCancelled()==false) {
-							isBooked =true;
-							break;
-						}
-						
-					}
-					if(!isBooked)
-						availableRooms.add(room);
-				}else {
-					availableRooms.add(room);
-				}
-			}else {
-				availableRooms.add(room);
-			}
-		}
-		
-		return availableRooms;
-	}
 	
-	public boolean verifyOverlapping(String time1, String time2) {
+	
+	public boolean verifyOverlappingTimings(String time1, String time2) {
 		List<Integer> list1 = getHours(time1);
 		List<Integer> list2 = getHours(time2);
 		
@@ -543,11 +545,11 @@ public class AppointmentPhysioManager {
 			System.out.println("No appointments available for the selected day. please try with some other date");
 			return;
 		}
-		List<String> headers = new ArrayList<>();
-		headers.add("s.no");
-		headers.add("Physician Name");
-		headers.add("Treatment Name");
-		headers.add("Appointment Timing");
+		List<String> tableHeaders = new ArrayList<>();
+		tableHeaders.add("s.no");
+		tableHeaders.add("Physician Name");
+		tableHeaders.add("Treatment Name");
+		tableHeaders.add("Appointment Timing");
 		List<List<String>> rows = new ArrayList<>();
 		for(int i=0;i<availableAppointments.size(); i++) {
 			Appointment appointment = availableAppointments.get(i);
@@ -559,7 +561,7 @@ public class AppointmentPhysioManager {
 			rows.add(row);
 		}
 		PrintTable table = new PrintTable();
-		table.print(rows, headers);
+		table.print(rows, tableHeaders);
 		System.out.println();
 		System.out.print("Please select s.no of the above appointments: ");
 		int num = Utils.readInteger();
@@ -619,7 +621,7 @@ public class AppointmentPhysioManager {
 		
 	}
 	
-	public boolean verifyAvailability(String time, List<Appointment> apps) {
+	public boolean verifyAvailabilityToBooking(String time, List<Appointment> apps) {
 		for(Appointment app: apps) {
 			if(app.getTiming().equals(time) && app.isCancelled()==false) {
 				return false;
@@ -632,17 +634,17 @@ public class AppointmentPhysioManager {
 		return patients.containsKey(id);
 	}
 	
-	public List<Appointment> getAppointmentsByPatientID(int id){
+	public List<Appointment> getAppointmentsByPatientIDDetails(int id){
 		return appointmentsByPatient.get(id).stream().filter(app -> app.isCancelled()==false).collect(Collectors.toList());
 	}
 	
 	public void cancelAppointment(int patientID, int appointmentID) {
 		if(!appointmentsByPatient.containsKey(patientID)) {
-			System.out.println("No appointments available for patient");
+			System.out.println("No appointments available");
 			return;
 		}
 			
-		List<Appointment> appointments = getAppointmentsByPatientID(patientID);
+		List<Appointment> appointments = getAppointmentsByPatientIDDetails(patientID);
 		for(Appointment app: appointments) {
 			if(app.getAppointmentID() == appointmentID) {
 				if(app.isAttended()) {
@@ -699,8 +701,8 @@ public class AppointmentPhysioManager {
 		}
 		System.out.println("s.no.\tPhysician Name\ttime");
 		for(int i=0; i<availableAppointments.size(); i++) {
-			VisitorAppointment app = availableAppointments.get(i);
-			System.out.println(i+1+"\t"+app.getPhysicianName()+"\t"+app.getTime());
+			VisitorAppointment visitorAppointment = availableAppointments.get(i);
+			System.out.println(i+1+"\t"+visitorAppointment.getPhysicianName()+"\t"+visitorAppointment.getTime());
 		}
 		System.out.print("Please select your preferred appointment: ");
 		int option = Utils.readInteger();
@@ -721,13 +723,13 @@ public class AppointmentPhysioManager {
 		List<VisitorAppointment> appointments = new ArrayList<>();
 		for(String time: physician.getConsultationHours().get(day)) {
 			if(visitorAppointments.get(date)==null) {
-				VisitorAppointment appointment = new VisitorAppointment();
-				appointment.setPhysicianID(physician.getId());
-				appointment.setDate(date);
-				appointment.setTime(time);
-				appointment.setVisitorName(visitorName);
-				appointment.setPhysicianName(physician.getphysioFullName());
-				appointments.add(appointment);
+				VisitorAppointment visitorAppointment = new VisitorAppointment();
+				visitorAppointment.setPhysicianID(physician.getId());
+				visitorAppointment.setDate(date);
+				visitorAppointment.setTime(time);
+				visitorAppointment.setVisitorName(visitorName);
+				visitorAppointment.setPhysicianName(physician.getphysioFullName());
+				appointments.add(visitorAppointment);
 			}else {
 				List<VisitorAppointment> apps = visitorAppointments.get(date);
 				boolean isBooked = false;
@@ -738,13 +740,13 @@ public class AppointmentPhysioManager {
 					}
 				}
 				if(!isBooked) {
-					VisitorAppointment appointment = new VisitorAppointment();
-					appointment.setPhysicianID(physician.getId());
-					appointment.setDate(date);
-					appointment.setTime(time);
-					appointment.setVisitorName(visitorName);
-					appointment.setPhysicianName(physician.getphysioFullName());
-					appointments.add(appointment);
+					VisitorAppointment visitorAppointment = new VisitorAppointment();
+					visitorAppointment.setPhysicianID(physician.getId());
+					visitorAppointment.setDate(date);
+					visitorAppointment.setTime(time);
+					visitorAppointment.setVisitorName(visitorName);
+					visitorAppointment.setPhysicianName(physician.getphysioFullName());
+					appointments.add(visitorAppointment);
 				}
 					
 			}
@@ -758,7 +760,7 @@ public class AppointmentPhysioManager {
 			System.out.println("No Appointments are booked by this patient.");
 			return;
 		}
-		List<Appointment> apps = getAppointmentsByPatientID(patientID);
+		List<Appointment> apps = getAppointmentsByPatientIDDetails(patientID);
 		for(Appointment app: apps) {
 			if(app.getAppointmentID()==appointmentID) {
 				if(app.isCancelled()) {
@@ -780,26 +782,26 @@ public class AppointmentPhysioManager {
 	}
 	
 	public void generateAppointmentReport() {
-		List<String> headers = new ArrayList<>();
-		headers.add("Physician Name");
-		headers.add("Treatment Name");
-		headers.add("Patient Name");
-		headers.add("Date");
-		headers.add("Time");
-		headers.add("Room");
+		List<String> tableHeaders = new ArrayList<>();
+		tableHeaders.add("Physician Name");
+		tableHeaders.add("Treatment Name");
+		tableHeaders.add("Patient Name");
+		tableHeaders.add("Date");
+		tableHeaders.add("Time");
+		tableHeaders.add("Room");
 		List<List<String>> rows = new ArrayList<>();
 		
 		for(Map<Integer, List<Appointment>> apps: appointments.values()) {
 			for(int i: apps.keySet()) {
 				for(Appointment app: apps.get(i)) {
-					List<String> row = new ArrayList<>();
-					row.add(app.getPhysicianName());
-					row.add(app.getTreatment());
-					row.add(app.getPatientName());
-					row.add(app.getAppointmentDate());
-					row.add(app.getTiming());
-					row.add(app.getRoom());
-					rows.add(row);
+					List<String> li = new ArrayList<>();
+					li.add(app.getPhysicianName());
+					li.add(app.getTreatment());
+					li.add(app.getPatientName());
+					li.add(app.getAppointmentDate());
+					li.add(app.getTiming());
+					li.add(app.getRoom());
+					rows.add(li);
 				}
 			}
 		}
@@ -809,26 +811,26 @@ public class AppointmentPhysioManager {
 			return;
 		}
 		PrintTable print = new PrintTable();
-		print.print(rows, headers);
+		print.print(rows, tableHeaders);
 		
 	}
 	
 	public void generateVisitorAppointmentReport() {
-		List<String> headers = new ArrayList<>();
-		headers.add("Physician Name");
-		headers.add("Visitor Name");
-		headers.add("Date");
-		headers.add("Time");
+		List<String> tableHeaders = new ArrayList<>();
+		tableHeaders.add("Physician Name");
+		tableHeaders.add("Visitor Name");
+		tableHeaders.add("Date");
+		tableHeaders.add("Time");
 		List<List<String>> rows = new ArrayList<>();
 		
 		for(List<VisitorAppointment> apps: visitorAppointments.values()) {
 			for(VisitorAppointment app: apps) {
-				List<String> row = new ArrayList<>();
-				row.add(app.getPhysicianName());
-				row.add(app.getVisitorName());
-				row.add(app.getDate());
-				row.add(app.getTime());
-				rows.add(row);
+				List<String> li = new ArrayList<>();
+				li.add(app.getPhysicianName());
+				li.add(app.getVisitorName());
+				li.add(app.getDate());
+				li.add(app.getTime());
+				rows.add(li);
 			}
 			
 		}
@@ -838,41 +840,41 @@ public class AppointmentPhysioManager {
 			return;
 		}
 		PrintTable print = new PrintTable();
-		print.print(rows, headers);
+		print.print(rows, tableHeaders);
 	
 	}
 	
 	public void generatePatientsReport() {
-		List<String> headers = new ArrayList<>();
-		headers.add("Patient ID");
-		headers.add("Patient Name");
-		headers.add("Appointment ID");
-		headers.add("Is Attended");
-		headers.add("Is Cancelled");
-		headers.add("Is Missed");
+		List<String> tableHeaders = new ArrayList<>();
+		tableHeaders.add("Patient ID");
+		tableHeaders.add("Patient Name");
+		tableHeaders.add("Appointment ID");
+		tableHeaders.add("Is Attended");
+		tableHeaders.add("Is Cancelled");
+		tableHeaders.add("Is Missed");
 		List<List<String>> rows = new ArrayList<>();
 		for(List<Appointment> apps: appointmentsByPatient.values()) {
 			for(Appointment app: apps) {
-				List<String> row = new ArrayList<>();
-				row.add(""+app.getPatientID());
-				row.add(app.getPatientName());
-				row.add(""+app.getAppointmentID());
+				List<String> li = new ArrayList<>();
+				li.add(""+app.getPatientID());
+				li.add(app.getPatientName());
+				li.add(""+app.getAppointmentID());
 				if(app.isAttended())
-					row.add("Yes");
+					li.add("Yes");
 				else
-					row.add("No");
+					li.add("No");
 				if(app.isCancelled())
-					row.add("Yes");
+					li.add("Yes");
 				else
-					row.add("No");
+					li.add("No");
 				if(app.isCancelled())
-					row.add("No");
+					li.add("No");
 				else if(!app.isAttended())
-					row.add("Yes");
+					li.add("Yes");
 				else
-					row.add("No");
+					li.add("No");
 				
-				rows.add(row);
+				rows.add(li);
 				
 			}
 			
@@ -883,8 +885,8 @@ public class AppointmentPhysioManager {
 			System.out.println("No Appointments Booked");
 			return;
 		}
-		PrintTable table = new PrintTable();
-		table.print(rows, headers);
+		PrintTable tableData = new PrintTable();
+		tableData.print(rows, tableHeaders);
 		
 	}
 	

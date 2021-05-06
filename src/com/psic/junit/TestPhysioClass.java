@@ -24,7 +24,7 @@ public class TestPhysioClass {
 		app.setPatientID(123);
 		app.setPhysicianID(1005);
 		AppointmentPhysioManager.getInstance().blockAppointment(app);
-		assertTrue(AppointmentPhysioManager.getInstance().getAppointmentsByPatientID(123).size()==1);
+		assertTrue(AppointmentPhysioManager.getInstance().getAppointmentsByPatientIDDetails(123).size()==1);
 	}
 	
 
